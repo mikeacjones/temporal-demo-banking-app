@@ -1,0 +1,49 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: banking-app
+  namespace: temporal-banking-app
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`banking-app.tmprl-demo.cloud`) && PathPrefix(`/api`)
+      services:
+        - name: backend
+          namespace: temporal-banking-app
+          passHostHeader: true
+          port: 8000
+    - kind: Rule
+      match: Host(`banking-app.tmprl-demo.cloud`)
+      services:
+        - name: banking-app-frontend
+          namespace: temporal-banking-app
+          passHostHeader: true
+          port: 80
+  tls:
+    secretName: banking-app-tls
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: banking-app-http
+  namespace: temporal-banking-app
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`banking-app.tmprl-demo.cloud`) && PathPrefix(`/api`)
+      services:
+        - name: backend
+          namespace: temporal-banking-app
+          passHostHeader: true
+          port: 8000
+    - kind: Rule
+      match: Host(`banking-app.tmprl-demo.cloud`)
+      services:
+        - name: banking-app-frontend
+          namespace: temporal-banking-app
+          passHostHeader: true
+          port: 80

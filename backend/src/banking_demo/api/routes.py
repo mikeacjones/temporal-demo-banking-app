@@ -18,6 +18,12 @@ from banking_demo.models import (
     TransferEvent,
     TransferRequest,
 )
+from banking_demo.temporal_ui import (
+    temporal_namespace,
+    temporal_namespace_url,
+    temporal_ui_base_url,
+    temporal_workflow_url,
+)
 
 app = FastAPI(title="Banking Transfer Demo API")
 
@@ -72,6 +78,15 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/api/temporal-ui")
+async def temporal_ui():
+    return {
+        "base_url": temporal_ui_base_url(),
+        "namespace": temporal_namespace(),
+        "namespace_url": temporal_namespace_url(),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Accounts
 # ---------------------------------------------------------------------------
@@ -122,18 +137,29 @@ async def create_transfer(request: TransferRequest):
     config.event_queues[transfer_id] = asyncio.Queue()
 
     client = await get_temporal_client()
-    await client.start_workflow(
+    workflow_id = f"transfer-{transfer_id}"
+    handle = await client.start_workflow(
         workflow_type,
         {
             "amount": request.amount,
             "fromAccount": request.from_account,
             "toAccount": request.to_account,
         },
-        id=f"transfer-{transfer_id}",
+        id=workflow_id,
         task_queue=os.environ.get("TEMPORAL_TASK_QUEUE") or "MoneyTransfer",
     )
+    run_id = handle.first_execution_run_id or handle.run_id or ""
 
-    return {"transfer_id": transfer_id, "status": "accepted"}
+    return {
+        "transfer_id": transfer_id,
+        "status": "accepted",
+        "workflow_id": workflow_id,
+        "run_id": run_id,
+        "temporal_ui_url": temporal_workflow_url(
+            workflow_id=workflow_id,
+            run_id=run_id,
+        ),
+    }
 
 
 @app.get("/api/transfers/{transfer_id}")

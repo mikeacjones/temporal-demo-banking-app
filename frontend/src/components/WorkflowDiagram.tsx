@@ -4,6 +4,7 @@ interface WorkflowDiagramProps {
   events: TransferEvent[]
   settings: Settings
   finalStatus: string | null
+  temporalWorkflowUrl?: string | null
 }
 
 interface StepDef {
@@ -55,7 +56,12 @@ const STATUS_LINE: Record<string, string> = {
   completed: 'bg-green-500',
 }
 
-export function WorkflowDiagram({ events, settings, finalStatus }: WorkflowDiagramProps) {
+export function WorkflowDiagram({
+  events,
+  settings,
+  finalStatus,
+  temporalWorkflowUrl,
+}: WorkflowDiagramProps) {
   const isDetailed = settings.presentation_mode === 'detailed'
   const showCompensation = events.some((e) =>
     COMPENSATION_STEPS.some((cs) => cs.key === e.step)
@@ -69,9 +75,27 @@ export function WorkflowDiagram({ events, settings, finalStatus }: WorkflowDiagr
     <div className="space-y-1">
       {/* Mode badge */}
       <div className="mb-3">
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30">
+        <a
+          href={temporalWorkflowUrl || undefined}
+          target="_blank"
+          rel="noreferrer"
+          aria-disabled={!temporalWorkflowUrl}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30 transition-colors ${
+            temporalWorkflowUrl
+              ? 'hover:bg-purple-500/30 hover:text-purple-100 cursor-pointer'
+              : 'cursor-default'
+          }`}
+          onClick={(event) => {
+            if (!temporalWorkflowUrl) event.preventDefault()
+          }}
+          title={
+            temporalWorkflowUrl
+              ? 'Open this workflow in Temporal UI'
+              : 'Start a transfer to open the workflow'
+          }
+        >
           Temporal Workflow
-        </span>
+        </a>
       </div>
 
       {/* Main steps */}

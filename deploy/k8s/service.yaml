@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: banking-app-frontend
+  namespace: temporal-banking-app
+  labels:
+    app: banking-app
+spec:
+  type: ClusterIP
+  selector:
+    app: banking-app
+    component: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5173
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: temporal-banking-app
+  labels:
+    app: banking-app
+spec:
+  type: ClusterIP
+  selector:
+    app: banking-app
+    component: backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

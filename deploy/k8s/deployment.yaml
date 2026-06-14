@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banking-app-frontend
+  namespace: temporal-banking-app
+  labels:
+    app: banking-app
+    component: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banking-app
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: banking-app
+        component: frontend
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: frontend
+          image: 429214323166.dkr.ecr.us-west-1.amazonaws.com/temporal-banking-app-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5173
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5173
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5173
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banking-app-backend
+  namespace: temporal-banking-app
+  labels:
+    app: banking-app
+    component: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banking-app
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: banking-app
+        component: backend
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: backend
+          image: 429214323166.dkr.ecr.us-west-1.amazonaws.com/temporal-banking-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: banking-app-config
+            - secretRef:
+                name: banking-app-secrets
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 150m
+              memory: 256Mi
+            limits:
+              cpu: 750m
+              memory: 512Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: banking-app-worker-python
+  namespace: temporal-banking-app
+  labels:
+    app: banking-app
+    component: worker-python
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banking-app
+      component: worker-python
+  template:
+    metadata:
+      labels:
+        app: banking-app
+        component: worker-python
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: worker
+          image: 429214323166.dkr.ecr.us-west-1.amazonaws.com/temporal-banking-app:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - uv
+            - run
+            - --package
+            - banking-demo-workflows
+            - worker
+          envFrom:
+            - configMapRef:
+                name: banking-app-config
+            - secretRef:
+                name: banking-app-secrets
+          resources:
+            requests:
+              cpu: 150m
+              memory: 256Mi
+            limits:
+              cpu: 750m
+              memory: 512Mi

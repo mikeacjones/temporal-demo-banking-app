@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: banking-app-tls
+  namespace: temporal-banking-app
+spec:
+  dnsNames:
+    - banking-app.tmprl-demo.cloud
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt
+  privateKey:
+    rotationPolicy: Always
+  secretName: banking-app-tls

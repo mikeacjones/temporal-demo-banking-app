@@ -14,6 +14,20 @@ export interface Settings {
   presentation_mode: PresentationMode
 }
 
+export interface TemporalUiInfo {
+  base_url: string
+  namespace: string
+  namespace_url: string
+}
+
+export interface CreateTransferResponse {
+  transfer_id: string
+  status: string
+  workflow_id?: string
+  run_id?: string
+  temporal_ui_url?: string
+}
+
 export interface Account {
   id: string
   name: string

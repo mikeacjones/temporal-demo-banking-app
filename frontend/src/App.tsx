@@ -9,7 +9,14 @@ import { TransferForm } from './components/TransferForm'
 import { TransferReview } from './components/TransferReview'
 import { TransferTracker } from './components/TransferTracker'
 import { useSSE } from './hooks/useSSE'
-import type { Account, DemoTab, PhoneScreen, Settings } from './types'
+import type {
+  Account,
+  CreateTransferResponse,
+  DemoTab,
+  PhoneScreen,
+  Settings,
+  TemporalUiInfo,
+} from './types'
 
 const DEFAULT_SETTINGS: Settings = {
   scenario: 'happy_path',
@@ -35,6 +42,8 @@ function App() {
   const [transferId, setTransferId] = useState<string | null>(null)
   const [isTransferring, setIsTransferring] = useState(false)
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
+  const [temporalUi, setTemporalUi] = useState<TemporalUiInfo | null>(null)
+  const [temporalWorkflowUrl, setTemporalWorkflowUrl] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const { events, finalStatus, reset: resetSSE } = useSSE(transferId)
@@ -48,6 +57,12 @@ function App() {
       .then((r) => r.json())
       .then(setAccounts)
       .catch(() => {})
+    fetch('/api/temporal-ui')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.namespace_url) setTemporalUi(data)
+      })
+      .catch(() => {})
   }, [])
 
   const handleSaveSettings = useCallback(
@@ -59,6 +74,7 @@ function App() {
         body: JSON.stringify(newSettings),
       })
       setTransferId(null)
+      setTemporalWorkflowUrl(null)
       setScreen('accounts')
       setFromAccount('')
       setToAccount('')
@@ -80,8 +96,9 @@ function App() {
           amount: parseFloat(amount),
         }),
       })
-      const data = await res.json()
+      const data = (await res.json()) as CreateTransferResponse
       setTransferId(data.transfer_id)
+      setTemporalWorkflowUrl(data.temporal_ui_url || null)
       setScreen('tracking')
     } finally {
       setIsTransferring(false)
@@ -90,6 +107,7 @@ function App() {
 
   const handleNewTransfer = useCallback(() => {
     setTransferId(null)
+    setTemporalWorkflowUrl(null)
     setFromAccount('')
     setToAccount('')
     setAmount('')
@@ -167,9 +185,27 @@ function App() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-500/20 text-purple-300">
+          <a
+            href={temporalUi?.namespace_url || undefined}
+            target="_blank"
+            rel="noreferrer"
+            aria-disabled={!temporalUi?.namespace_url}
+            className={`text-xs px-2 py-1 rounded-full font-medium bg-purple-500/20 text-purple-300 transition-colors ${
+              temporalUi?.namespace_url
+                ? 'hover:bg-purple-500/30 hover:text-purple-100 cursor-pointer'
+                : 'cursor-default'
+            }`}
+            onClick={(event) => {
+              if (!temporalUi?.namespace_url) event.preventDefault()
+            }}
+            title={
+              temporalUi?.namespace
+                ? `Open ${temporalUi.namespace} in Temporal UI`
+                : 'Open Temporal namespace'
+            }
+          >
             {SCENARIO_LABELS[settings.scenario] || settings.scenario}
-          </span>
+          </a>
           <button
             onClick={() => setSettingsOpen(true)}
             className="text-gray-400 hover:text-gray-200 text-xl transition-colors"
@@ -185,7 +221,12 @@ function App() {
         {tab === 'customer' ? (
           <div className="flex-1 flex items-stretch overflow-hidden">
             <PhoneFrame>{renderPhoneContent()}</PhoneFrame>
-            <BackstagePanel events={events} settings={settings} finalStatus={finalStatus} />
+            <BackstagePanel
+              events={events}
+              settings={settings}
+              finalStatus={finalStatus}
+              temporalWorkflowUrl={temporalWorkflowUrl}
+            />
             <div className="min-w-[33vw] flex-1 flex-shrink-0 border-l border-gray-700 overflow-hidden">
               <TemporalCodeView events={events} finalStatus={finalStatus} />
             </div>

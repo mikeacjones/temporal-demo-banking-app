@@ -87,6 +87,38 @@ The env file supports two authentication methods:
 
 When using `--cloud-env`, no local Temporal server is started. The worker and backend connect directly to your Cloud namespace. Combine with `--encrypt` for encrypted payloads on Cloud.
 
+## AWS Lambda Worker Container
+
+The normal worker remains available through `uv run --package banking-demo-workflows worker` and `docker/worker-python.Dockerfile`. For Temporal Serverless Workers on AWS Lambda, build the Lambda-specific image:
+
+```bash
+docker build -f docker/worker-python-lambda.Dockerfile -t banking-demo-lambda-worker .
+```
+
+The image uses the AWS Lambda Python runtime and exposes this handler:
+
+```text
+banking_workflows.lambda_worker.lambda_handler
+```
+
+Set these Lambda environment variables when deploying the image:
+
+| Variable | Purpose |
+|---|---|
+| `TEMPORAL_ADDRESS` | Temporal Cloud address, including port |
+| `TEMPORAL_NAMESPACE` | Temporal namespace |
+| `TEMPORAL_API_KEY` | API key auth, preferred for Lambda |
+| `TEMPORAL_TASK_QUEUE` | Defaults to `MoneyTransfer` |
+| `TEMPORAL_WORKER_DEPLOYMENT_NAME` | Worker Deployment name, defaults to `banking-transfer-demo` |
+| `TEMPORAL_WORKER_BUILD_ID` | Worker Deployment Version build ID; must match the version registered in Temporal |
+| `TEMPORAL_WORKER_VERSIONING_BEHAVIOR` | `PINNED` by default; can be `AUTO_UPGRADE` |
+| `BANKING_BACKEND_URL` | Reachable backend URL for UI events and approvals |
+| `BANKING_ENCRYPT` | Set to `1` to keep payload encryption enabled |
+
+For mTLS, the handler also supports the existing `TEMPORAL_CERT_PATH` / `TEMPORAL_KEY_PATH` variables and the SDK names `TEMPORAL_TLS_CLIENT_CERT_PATH` / `TEMPORAL_TLS_CLIENT_KEY_PATH`, as long as the cert and key files are available inside the Lambda runtime.
+
+When creating the Temporal Worker Deployment Version, use the same deployment name, build ID, task queue, and Lambda function ARN that you deployed in AWS.
+
 ## Architecture
 
 ```
